@@ -40,14 +40,19 @@ async function handlePTInfo(interaction) {
   const name = "PT001"; // 固定PT番号（必要に応じて引数にすることも可能）
 
   try {
+    // 1. まず「応答を遅延」
+    await interaction.deferReply({ ephemeral: true });
+
+    // 2. GAS にリクエスト
     const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(name)}`);
     const data = await res.json();
 
     if (data.error) {
-      await interaction.reply({ content: data.error, ephemeral: true });
+      await interaction.editReply({ content: `❌ ${data.error}` });
       return;
     }
 
+    // 3. 成功時のレスポンス
     const embed = new EmbedBuilder()
       .setTitle(`PT情報: ${data.title}`)
       .setColor(0x00AE86)
@@ -60,13 +65,12 @@ async function handlePTInfo(interaction) {
       )
       .setFooter({ text: 'PT祠募集（GAS連携）' });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
     console.error('❌ GAS からのデータ取得に失敗しました:', error);
-    await interaction.reply({
-      content: 'GAS から情報を取得できませんでした。しばらくしてから再度お試しください。',
-      ephemeral: true
+    await interaction.editReply({
+      content: '⚠️ GAS から情報を取得できませんでした。しばらくしてから再度お試しください。'
     });
   }
 }
