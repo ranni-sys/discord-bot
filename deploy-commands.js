@@ -1,5 +1,5 @@
+// deploy-commands.js
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-require('dotenv').config();
 
 const commands = [
   new SlashCommandBuilder()
@@ -8,17 +8,12 @@ const commands = [
     .toJSON()
 ];
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+async function registerCommands() {
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  await rest.put(
+    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+    { body: commands }
+  );
+}
 
-(async () => {
-  try {
-    console.log('⏳ /ptinfo を登録中...');
-    await rest.put(
-      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-      { body: commands }
-    );
-    console.log('✅ 登録完了！');
-  } catch (err) {
-    console.error('❌ 登録エラー:', err);
-  }
-})();
+module.exports = { registerCommands };
