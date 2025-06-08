@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-require('dotenv').config(); // .env からトークンなどを読み込む場合
 
 // ✅ client を定義
 const client = new Client({
