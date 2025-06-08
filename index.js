@@ -1,26 +1,21 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const fetch = require('node-fetch');
+const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(name)}`);
+const data = await res.json();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+if (data.error) {
+  await interaction.reply({ content: data.error, ephemeral: true });
+  return;
+}
 
-const TOKEN = process.env.DISCORD_TOKEN;
-const GAS_URL = process.env.GAS_URL;
+const embed = new EmbedBuilder()
+  .setTitle(`PT情報: ${data.title}`)
+  .setColor(0x00AE86)
+  .addFields(
+    data.entries.map(entry => ({
+      name: entry.label,
+      value: entry.value || '―',
+      inline: true
+    }))
+  )
+  .setFooter({ text: 'PT祠募集（GAS連携）' });
 
-client.once('ready', () => {
-  console.log(`Bot is ready`);
-});
-
-client.on('messageCreate', async message => {
-  if (!message.content.startsWith('!search') || message.author.bot) return;
-
-  const args = message.content.split(' ');
-  const name = args[1];
-  if (!name) return message.reply('名前を入力してください。');
-
-  const res = await fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`);
-  const text = await res.text();
-
-  message.reply(text);
-});
-
-client.login(TOKEN);
+await interaction.reply({ embeds: [embed] });
