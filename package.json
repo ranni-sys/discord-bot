@@ -2,8 +2,9 @@
   "name": "discord-bot",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "commonjs",
   "dependencies": {
     "discord.js": "^14.0.0",
-    "node-fetch": "^3.0.0"
+    "node-fetch": "^2.6.7"
   }
 }
