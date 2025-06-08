@@ -8,7 +8,7 @@ const commands = [
     .setDescription('指定したPT番号の情報を取得します')
     .addStringOption(option =>
       option.setName('ptnumber')
-        .setDescription('取得したいPT番号（例: PT001）')
+        .setDescription('取得したいPT番号（例: PT1）')
         .setRequired(true)
     )
     .toJSON()
