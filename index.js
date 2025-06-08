@@ -37,14 +37,20 @@ client.on('interactionCreate', async interaction => {
 
 // PT情報取得用の関数
 async function handlePTInfo(interaction) {
-  const name = "PT001"; // 固定PT番号（必要に応じて引数にすることも可能）
+  const ptNumber = interaction.options.getString('ptnumber');
+
+  if (!ptNumber) {
+    await interaction.reply({
+      content: '❗ PT番号が指定されていません。',
+      ephemeral: true
+    });
+    return;
+  }
 
   try {
-    // 1. まず「応答を遅延」
     await interaction.deferReply({ ephemeral: true });
 
-    // 2. GAS にリクエスト
-    const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(name)}`);
+    const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`);
     const data = await res.json();
 
     if (data.error) {
@@ -52,7 +58,6 @@ async function handlePTInfo(interaction) {
       return;
     }
 
-    // 3. 成功時のレスポンス
     const embed = new EmbedBuilder()
       .setTitle(`PT情報: ${data.title}`)
       .setColor(0x00AE86)
