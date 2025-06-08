@@ -1,4 +1,12 @@
-const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(name)}`);
+async function main() {
+  const name = "PT001"; // 例：仮のPT番号、実際はユーザー入力など
+  const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(name)}`);
+  const data = await res.json();
+  console.log(data);
+}
+
+main();
+
 const data = await res.json();
 
 if (data.error) {
