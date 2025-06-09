@@ -74,16 +74,15 @@ async function handlePTInfo(interaction) {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle(`PT情報: ${data.title}`)
-      .setColor(0x00AE86)
-      .addFields(
-        data.entries.map(entry => ({
-          name: entry.label,
-          value: String(entry.value || '―'),
-          inline: true
-        }))
-      )
-      .setFooter({ text: 'PT祠募集（GAS連携）' });
+    .setTitle(`PT情報: ${data.title}`)
+    .setColor(0x00AE86)
+    .setDescription(
+      data.entries
+        .map(entry => `${entry.label} | ${entry.value || '―'}`)
+        .join('\n')
+    )
+    .setFooter({ text: 'PT祠募集（GAS連携）' });
+
 
     await interaction.editReply({ embeds: [embed] });
 
