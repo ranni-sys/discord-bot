@@ -41,14 +41,13 @@ async function handlePTInfo(interaction) {
 
   if (!ptNumber) {
     await interaction.reply({
-      content: '❗ PT番号が指定されていません。',
-      ephemeral: true
+      content: '❗ PT番号が指定されていません。'
     });
     return;
   }
 
   try {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply();
 
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
     console.log("🔗 Fetching URL:", url);
