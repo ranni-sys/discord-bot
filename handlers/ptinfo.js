@@ -1,6 +1,10 @@
 const fetch = require('node-fetch');
 const { EmbedBuilder } = require('discord.js');
 
+function escapeMarkdown(text) {
+  return text?.replace(/([*_`~|])/g, '\\$1') ?? '―';
+}
+
 async function handlePTInfo(interaction) {
   const ptNumber = interaction.options.getString('ptnumber');
 
@@ -14,12 +18,21 @@ async function handlePTInfo(interaction) {
   }
 
   try {
-    await interaction.deferReply();
+    await interaction.deferReply({ ephemeral: true });
 
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
     const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`❌ HTTPエラー: ${res.status} ${res.statusText}`);
+      await interaction.editReply({
+        content: '⚠️ GASとの通信に失敗しました。',
+        ephemeral: true
+      });
+      return;
+    }
+
     const text = await res.text();
     console.log("📦 受信したレスポンス:", text);
 
@@ -44,14 +57,22 @@ async function handlePTInfo(interaction) {
       return;
     }
 
+    if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
+      await interaction.editReply({
+        content: '⚠️ 該当するPT情報が見つかりませんでした。',
+        ephemeral: true
+      });
+      return;
+    }
+
+    const description = data.entries
+      .map(entry => `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`)
+      .join('\n');
+
     const embed = new EmbedBuilder()
-      .setTitle(`PT情報: ${data.title}`)
+      .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
       .setColor(0x00AE86)
-      .setDescription(
-        data.entries
-          .map(entry => `${entry.label} | ${entry.value || '―'}`)
-          .join('\n')
-      )
+      .setDescription(description)
       .setFooter({ text: '参加or訂正は該当URLから' });
 
     console.log(`✅ 埋め込みメッセージを送信しました: ${data.title}`);
