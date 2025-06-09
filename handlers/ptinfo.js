@@ -10,10 +10,12 @@ async function handlePTInfo(interaction) {
 
   if (!ptNumber) {
     console.warn('⚠️ PT番号が未指定でリクエストされました');
-    await interaction.reply({
-      content: '❗ PT番号が指定されていません。',
-      ephemeral: true
-    });
+    if (interaction.isRepliable()) {
+      await interaction.reply({
+        content: '❗ PT番号が指定されていません。',
+        ephemeral: true
+      }).catch(console.error);
+    }
     return;
   }
 
@@ -23,7 +25,21 @@ async function handlePTInfo(interaction) {
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500); // 2.5秒でタイムアウト
+
+    let res;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        throw new Error('GASへのリクエストがタイムアウトしました。');
+      }
+      throw fetchError;
+    } finally {
+      clearTimeout(timeout);
+    }
+
     if (!res.ok) {
       console.error(`❌ HTTPエラー: ${res.status} ${res.statusText}`);
       await interaction.editReply({
@@ -34,13 +50,13 @@ async function handlePTInfo(interaction) {
     }
 
     const text = await res.text();
-    console.log("📦 受信したレスポンス:", text);
+    console.log('📦 受信したレスポンス:', text);
 
     let data;
     try {
       data = JSON.parse(text);
     } catch (parseError) {
-      console.error("❌ JSON パースエラー:", parseError);
+      console.error('❌ JSON パースエラー:', parseError);
       await interaction.editReply({
         content: '⚠️ GAS から不正なデータが返されました。',
         ephemeral: true
@@ -49,7 +65,7 @@ async function handlePTInfo(interaction) {
     }
 
     if (data.error) {
-      console.warn("⚠️ GAS からのエラー:", data.error);
+      console.warn('⚠️ GAS からのエラー:', data.error);
       await interaction.editReply({
         content: `❌ ${data.error}`,
         ephemeral: true
@@ -80,10 +96,18 @@ async function handlePTInfo(interaction) {
 
   } catch (error) {
     console.error('❌ GAS からのデータ取得に失敗しました:', error);
-    await interaction.editReply({
-      content: '⚠️ GAS から情報を取得できませんでした。しばらくしてから再度お試しください。',
-      ephemeral: true
-    });
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.editReply({
+        content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
+        ephemeral: true
+      }).catch(console.error);
+    } else if (interaction.isRepliable()) {
+      await interaction.reply({
+        content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
+        ephemeral: true
+      }).catch(console.error);
+    }
   }
 }
 
