@@ -48,17 +48,28 @@ async function handlePTInfo(ptNumber) {
 
 // EmbedBuilderを返す関数
 function createEmbedFromData(data) {
-  const description = data.entries
-    .map(entry => `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`)
-    .join('\n');
+  const separator = '　'; // ← 全角スペース1文字
+  const descriptionLines = data.entries.map(entry =>
+    `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`
+  );
+
+  // 空行を挿入する位置（0-based index）
+  const insertAt = [2, 5, 10, 15]; // 表示構成によって微調整可
+
+  insertAt.reverse().forEach(index => {
+    if (index <= descriptionLines.length) {
+      descriptionLines.splice(index, 0, separator);
+    }
+  });
 
   const embed = new EmbedBuilder()
     .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
     .setColor(0x00AE86)
-    .setDescription(description)
+    .setDescription(descriptionLines.join('\n'))
     .setFooter({ text: '参加or訂正は該当URLから' });
 
   return embed;
 }
+
 
 module.exports = { handlePTInfo, createEmbedFromData };
