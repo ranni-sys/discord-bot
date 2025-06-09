@@ -80,7 +80,7 @@ async function handlePTInfo(interaction) {
         .map(entry => `${entry.label} | ${entry.value || '―'}`)
         .join('\n')
     )
-    .setFooter({ text: 'PT祠募集（GAS連携）' });
+    .setFooter({ text: '参加表明は該当URLから' });
 
 
     await interaction.editReply({ embeds: [embed] });
