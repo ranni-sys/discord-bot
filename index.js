@@ -15,14 +15,15 @@ const client = new Client({
 
 // 起動時の処理
 client.once('ready', async () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
+  const botTag = client.user.tag;
+  console.log(`✅ Discord Bot Ready! Logged in as ${botTag}`);
 
-  // 起動時にスラッシュコマンド登録
+  // スラッシュコマンド登録
   try {
     await registerCommands();
-    console.log('✅ スラッシュコマンドを登録しました');
+    console.log('✅ スラッシュコマンドの登録に成功しました');
   } catch (err) {
-    console.error('❌ コマンド登録に失敗しました:', err);
+    console.error('❌ スラッシュコマンドの登録に失敗しました:', err);
   }
 });
 
@@ -31,6 +32,7 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName === 'ptinfo') {
+    console.log(`📥 /ptinfo コマンドを受信: ${interaction.user.tag} が ${interaction.options.getString('ptnumber')} をリクエスト`);
     await handlePTInfo(interaction);
   }
 });
