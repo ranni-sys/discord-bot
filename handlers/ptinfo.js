@@ -19,9 +19,6 @@ async function handlePTInfo(interaction) {
     return;
   }
 
-  try {
-    await interaction.deferReply({ ephemeral: true });
-
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
