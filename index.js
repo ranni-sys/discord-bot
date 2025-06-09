@@ -1,6 +1,18 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
+const { registerCommands } = require('./deploy-commands');
+
+// 即時関数で登録を実行
+(async () => {
+  try {
+    console.log('🔄 Registering slash commands...');
+    await registerCommands();
+    console.log('✅ Slash commands registered successfully.');
+  } catch (err) {
+    console.error('❌ Failed to register commands:', err);
+  }
+})();
 
 const client = new Client({
   intents: [
