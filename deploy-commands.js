@@ -1,7 +1,6 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
-// コマンド定義
 const commands = [
   new SlashCommandBuilder()
     .setName('ptinfo')
@@ -14,14 +13,28 @@ const commands = [
     .toJSON()
 ];
 
-// RESTクライアントを初期化
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-// コマンド登録関数
 async function registerCommands() {
   try {
     console.log('🔄 スラッシュコマンドを登録中...');
 
+    // 既存のアプリケーションコマンドを取得
+    const existingCommands = await rest.get(
+      Routes.applicationCommands(process.env.CLIENT_ID)
+    );
+
+    // 同名のコマンドがあれば削除
+    for (const command of existingCommands) {
+      if (commands.find(cmd => cmd.name === command.name)) {
+        console.log(`🗑️ 既存コマンド '${command.name}' を削除中...`);
+        await rest.delete(
+          Routes.applicationCommand(process.env.CLIENT_ID, command.id)
+        );
+      }
+    }
+
+    // 新しいコマンドを登録
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands }
