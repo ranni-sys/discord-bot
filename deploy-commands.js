@@ -5,21 +5,17 @@ const commands = [
   new SlashCommandBuilder()
     .setName('ptinfo')
     .setDescription('指定したPT番号のPT情報を取得')
-    .addStringOption(
-      new SlashCommandBuilder().options[0] = {
-        name: 'ptnumber',
-        description: 'PT番号から募集を取得（例: PT1）',
-        required: false,
-        type: 3 // 文字列
-      }
+    .addStringOption(option =>
+      option
+        .setName('ptnumber')
+        .setDescription('PT番号から募集を取得（例: PT1）')
+        .setRequired(false)
     )
-    .addStringOption(
-      new SlashCommandBuilder().options[0] = {
-        name: 'recruiter',
-        description: '募集主の家名から最近の募集を取得（例: Ranniの旅）',
-        required: false,
-        type: 3
-      }
+    .addStringOption(option =>
+      option
+        .setName('recruiter')
+        .setDescription('募集主の家名から最近の募集を取得（例: Ranniの旅）')
+        .setRequired(false)
     )
     .toJSON(),
 
@@ -27,7 +23,8 @@ const commands = [
     .setName('progress')
     .setDescription('ギルメンの今週のクリア状況を取得')
     .addStringOption(option =>
-      option.setName('targetName')
+      option
+        .setName('targetname')
         .setDescription('家名からクリア状況を取得（例: Ranniの旅）')
         .setRequired(false)
     )
