@@ -24,11 +24,15 @@ async function handlePTInfo(interaction) {
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500); // 2.5秒でタイムアウト
+    // タイムアウトを5秒に延長
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
     let res;
     try {
-      res = await fetch(url, { signal: controller.signal });
+      res = await fetch(url, {
+        signal: controller.signal,
+        redirect: 'follow' // ← ここを追加しリダイレクト追従を明示
+      });
     } catch (fetchError) {
       if (fetchError.name === 'AbortError') {
         throw new Error('GASへのリクエストがタイムアウトしました。');
