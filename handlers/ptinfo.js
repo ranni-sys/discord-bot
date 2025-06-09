@@ -48,9 +48,9 @@ async function handlePTInfo(ptNumber) {
 
 // EmbedBuilderを返す関数
 function createEmbedFromData(data) {
-  const separator = '　'; // ← 全角スペース1文字
+  const separator = '　'; // 全角スペース1文字
   const descriptionLines = data.entries.map(entry =>
-    `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`
+    `${entry.label} | ${escapeMarkdown(entry.value)}`
   );
 
   // 空行を挿入する位置（0-based index）
@@ -70,6 +70,5 @@ function createEmbedFromData(data) {
 
   return embed;
 }
-
 
 module.exports = { handlePTInfo, createEmbedFromData };
