@@ -5,48 +5,53 @@ function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
-async function handlePTInfo(interaction) {
+async function handlePTInfo(interaction, PTnumber, signal = null, useFollowUp = false) {
   try {
-    const ptNumber = interaction.options.getString('ptnumber');
-
-    if (!ptNumber) {
+    if (!PTnumber) {
       console.warn('⚠️ PT番号が未指定でリクエストされました');
       if (interaction.isRepliable()) {
         await interaction.reply({
           content: '❗ PT番号が指定されていません。',
-          flags: InteractionResponseFlags.Ephemeral
+          flags: InteractionResponseFlags.Ephemeral,
         }).catch(console.error);
       }
       return;
     }
 
-    const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
+    const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(PTnumber)}`;
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const controller = signal ? null : new AbortController();
+    const timeout = controller ? setTimeout(() => controller.abort(), 10000) : null;
 
     let res;
     try {
       res = await fetch(url, {
-        signal: controller.signal,
+        signal: signal ?? controller.signal,
         redirect: 'follow'
       });
     } catch (fetchError) {
-      clearTimeout(timeout);
       if (fetchError.name === 'AbortError') {
         throw new Error('GASへのリクエストがタイムアウトしました。');
       }
       throw fetchError;
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
-    clearTimeout(timeout);
 
     if (!res.ok) {
       console.error(`❌ HTTPエラー: ${res.status} ${res.statusText}`);
-      await interaction.editReply({
-        content: '⚠️ GASとの通信に失敗しました。',
-        flags: InteractionResponseFlags.Ephemeral
-      });
+      if (useFollowUp) {
+        await interaction.followUp({
+          content: '⚠️ GASとの通信に失敗しました。',
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: '⚠️ GASとの通信に失敗しました。',
+          flags: InteractionResponseFlags.Ephemeral,
+        });
+      }
       return;
     }
 
@@ -58,27 +63,48 @@ async function handlePTInfo(interaction) {
       data = JSON.parse(text);
     } catch (parseError) {
       console.error('❌ JSON パースエラー:', parseError);
-      await interaction.editReply({
-        content: '⚠️ GAS から不正なデータが返されました。',
-        flags: InteractionResponseFlags.Ephemeral
-      });
+      if (useFollowUp) {
+        await interaction.followUp({
+          content: '⚠️ GAS から不正なデータが返されました。',
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: '⚠️ GAS から不正なデータが返されました。',
+          flags: InteractionResponseFlags.Ephemeral,
+        });
+      }
       return;
     }
 
     if (data.error) {
       console.warn('⚠️ GAS からのエラー:', data.error);
-      await interaction.editReply({
-        content: `❌ ${data.error}`,
-        flags: InteractionResponseFlags.Ephemeral
-      });
+      if (useFollowUp) {
+        await interaction.followUp({
+          content: `❌ ${data.error}`,
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: `❌ ${data.error}`,
+          flags: InteractionResponseFlags.Ephemeral,
+        });
+      }
       return;
     }
 
     if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
-      await interaction.editReply({
-        content: '⚠️ 該当するPT情報が見つかりませんでした。',
-        flags: InteractionResponseFlags.Ephemeral
-      });
+      if (useFollowUp) {
+        await interaction.followUp({
+          content: '⚠️ 該当するPT情報が見つかりませんでした。',
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: '⚠️ 該当するPT情報が見つかりませんでした。',
+          flags: InteractionResponseFlags.Ephemeral,
+        });
+      }
       return;
     }
 
@@ -93,20 +119,30 @@ async function handlePTInfo(interaction) {
       .setFooter({ text: '参加or訂正は該当URLから' });
 
     console.log(`✅ 埋め込みメッセージを送信しました: ${data.title}`);
-    await interaction.editReply({ embeds: [embed] });
+
+    if (useFollowUp) {
+      await interaction.followUp({ embeds: [embed] });
+    } else {
+      await interaction.editReply({ embeds: [embed] });
+    }
 
   } catch (error) {
     console.error('❌ GAS からのデータ取得に失敗しました:', error);
 
-    if (interaction.replied || interaction.deferred) {
+    if (useFollowUp) {
+      await interaction.followUp({
+        content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
+        ephemeral: true,
+      }).catch(console.error);
+    } else if (interaction.replied || interaction.deferred) {
       await interaction.editReply({
         content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
-        flags: InteractionResponseFlags.Ephemeral
+        flags: InteractionResponseFlags.Ephemeral,
       }).catch(console.error);
     } else if (interaction.isRepliable()) {
       await interaction.reply({
         content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
-        flags: InteractionResponseFlags.Ephemeral
+        flags: InteractionResponseFlags.Ephemeral,
       }).catch(console.error);
     }
   }
