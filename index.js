@@ -77,17 +77,15 @@ async function handlePTInfo(interaction) {
       return;
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle(`PT情報: ${data.title}`)
-      .setColor(0x00AE86)
-      .addFields(
-        data.entries.map(entry => ({
-          name: entry.label,
-          value: String(entry.value || '―'),
-          inline: true
-        }))
-      )
-      .setFooter({ text: '参加希望は該当URLから' });
+const embed = new EmbedBuilder()
+  .setTitle(`PT情報: ${data.title}`)
+  .setColor(0x00AE86)
+  .setDescription(
+    data.entries
+      .map(entry => `${entry.label} | ${entry.value || '―'}`)
+      .join('\n')
+  )
+  .setFooter({ text: '参加or訂正は該当URLから' });
 
     await interaction.editReply({ embeds: [embed] });
 
