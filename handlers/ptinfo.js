@@ -5,6 +5,7 @@ async function handlePTInfo(interaction) {
   const ptNumber = interaction.options.getString('ptnumber');
 
   if (!ptNumber) {
+    console.warn('⚠️ PT番号が未指定でリクエストされました');
     await interaction.reply({
       content: '❗ PT番号が指定されていません。',
       ephemeral: true
@@ -16,11 +17,11 @@ async function handlePTInfo(interaction) {
     await interaction.deferReply();
 
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
-    console.log("🔗 Fetching URL:", url);
+    console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
     const res = await fetch(url);
     const text = await res.text();
-    console.log("📦 Raw response text:", text);
+    console.log("📦 受信したレスポンス:", text);
 
     let data;
     try {
@@ -35,6 +36,7 @@ async function handlePTInfo(interaction) {
     }
 
     if (data.error) {
+      console.warn("⚠️ GAS からのエラー:", data.error);
       await interaction.editReply({
         content: `❌ ${data.error}`,
         ephemeral: true
@@ -52,6 +54,7 @@ async function handlePTInfo(interaction) {
       )
       .setFooter({ text: '参加or訂正は該当URLから' });
 
+    console.log(`✅ 埋め込みメッセージを送信しました: ${data.title}`);
     await interaction.editReply({ embeds: [embed] });
 
   } catch (error) {
