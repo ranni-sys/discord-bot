@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const fetch = require('node-fetch');
 const { registerCommands } = require('./deploy-commands');
+const { handlePTInfo } = require('./handlers/ptinfo');
 
 // Discordクライアントを作成
 const client = new Client({
