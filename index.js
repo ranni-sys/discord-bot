@@ -18,66 +18,59 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
   if (interaction.commandName === 'ptinfo') {
-    try {
-      const ptNumber = interaction.options.getString('ptnumber');
+    const ptNumber = interaction.options.getString('ptnumber');
 
-      // 即時応答（非公開）
+    try {
       await interaction.deferReply({ ephemeral: true });
 
-      // タイムアウト用Promise
-      const timeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout after 3s')), 3000);
-      });
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 3s')), 3000));
 
-      // PT情報取得をPromise.raceでタイムアウト制御
       const data = await Promise.race([
         handlePTInfo(ptNumber),
-        timeout
+        timeout,
       ]);
 
-      // 正常取得した場合、ephemeralメッセージを編集（任意）
       await interaction.editReply({
         content: '✅ PT情報を正常に取得しました。',
-        ephemeral: true
       });
 
-      // 通常チャットに埋め込みメッセージ送信
       const embed = createEmbedFromData(data);
       await interaction.followUp({ embeds: [embed], ephemeral: false });
 
     } catch (err) {
-      if (err.message === 'Timeout after 3s') {
-        // タイムアウト時はephemeralメッセージで通知
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply({
-            content: '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。',
-            ephemeral: true
-          });
-        } else if (interaction.isRepliable()) {
-          await interaction.reply({
-            content: '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。',
-            ephemeral: true
-          });
-        }
+      // interactionの状態をログに出す
+      console.error('--- Interaction state ---');
+      console.error('deferred:', interaction.deferred);
+      console.error('replied:', interaction.replied);
+      console.error('ephemeral:', interaction.ephemeral);
+      console.error('isRepliable:', interaction.isRepliable());
+      console.error('Error:', err);
 
-        // タイムアウトしてもhandlePTInfoを再度呼んで埋め込みだけ送る（GASは非同期応答想定）
-        const ptNumber = interaction.options.getString('ptnumber');
-        const data = await handlePTInfo(ptNumber);
-        const embed = createEmbedFromData(data);
-        await interaction.followUp({ embeds: [embed], ephemeral: false });
+      const errorMessage = err.message === 'Timeout after 3s' ?
+        '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。' :
+        '❌ エラーが発生しました。しばらくして再試行してください。';
+
+      if (interaction.deferred || interaction.replied) {
+        try {
+          await interaction.editReply({ content: errorMessage });
+        } catch (e) {
+          console.error('editReply失敗:', e);
+        }
       } else {
-        // その他エラー処理
-        console.error(err);
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply({
-            content: '❌ エラーが発生しました。しばらくして再試行してください。',
-            ephemeral: true
-          });
-        } else if (interaction.isRepliable()) {
-          await interaction.reply({
-            content: '❌ エラーが発生しました。',
-            ephemeral: true
-          });
+        try {
+          await interaction.reply({ content: errorMessage, ephemeral: true });
+        } catch (e) {
+          console.error('reply失敗:', e);
+        }
+      }
+
+      if (err.message === 'Timeout after 3s') {
+        try {
+          const data = await handlePTInfo(ptNumber);
+          const embed = createEmbedFromData(data);
+          await interaction.followUp({ embeds: [embed], ephemeral: false });
+        } catch (e) {
+          console.error('フォローアップ送信失敗:', e);
         }
       }
     }
