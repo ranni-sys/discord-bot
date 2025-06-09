@@ -20,25 +20,24 @@ async function registerCommands() {
     console.log('🔄 スラッシュコマンドを登録中...');
 
     // 既存のアプリケーションコマンドを取得
-    const existingCommands = await rest.get(
-      Routes.applicationCommands(process.env.CLIENT_ID)
-    );
+const existingCommands = await rest.get(
+  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
+);
 
-    // 同名のコマンドがあれば削除
-    for (const command of existingCommands) {
-      if (commands.find(cmd => cmd.name === command.name)) {
-        console.log(`🗑️ 既存コマンド '${command.name}' を削除中...`);
-        await rest.delete(
-          Routes.applicationCommand(process.env.CLIENT_ID, command.id)
-        );
-      }
-    }
-
-    // 新しいコマンドを登録
-    await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID),
-      { body: commands }
+for (const command of existingCommands) {
+  if (commands.find(cmd => cmd.name === command.name)) {
+    console.log(`🗑️ 既存コマンド '${command.name}' を削除中...`);
+    await rest.delete(
+      Routes.applicationGuildCommand(process.env.CLIENT_ID, process.env.GUILD_ID, command.id)
     );
+  }
+}
+
+await rest.put(
+  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+  { body: commands }
+);
+
 
     console.log('✅ スラッシュコマンドを登録しました！');
   } catch (error) {
