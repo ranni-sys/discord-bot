@@ -54,7 +54,7 @@ function createEmbedFromData(data) {
   );
 
   // 空行を挿入する位置（0-based index）
-  const insertAt = [2, 5, 10, 15]; // 表示構成によって微調整可
+  const insertAt = [2, 7, 12, 18]; // 表示構成にあわせて調整済み
 
   insertAt.reverse().forEach(index => {
     if (index <= descriptionLines.length) {
