@@ -1,116 +1,64 @@
 const fetch = require('node-fetch');
-const { EmbedBuilder, MessageFlags } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 
 function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
-async function handlePTInfo(interaction) {
+// GASからPT情報を取得しJSONで返す関数
+async function handlePTInfo(ptNumber) {
+  if (!ptNumber) throw new Error('PT番号が指定されていません');
+
+  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
+  console.log(`🌐 GAS にリクエスト送信中: ${url}`);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  let res;
   try {
-    const ptNumber = interaction.options.getString('ptnumber');
-
-    if (!ptNumber) {
-      console.warn('⚠️ PT番号が未指定でリクエストされました');
-      if (interaction.isRepliable()) {
-        await interaction.reply({
-          content: '❗ PT番号が指定されていません。',
-          flags: MessageFlags.Ephemeral
-        }).catch(console.error);
-      }
-      return;
-    }
-
-    // GAS APIリクエストURL
-    const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
-    console.log(`🌐 GAS にリクエスト送信中: ${url}`);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    let res;
-    try {
-      res = await fetch(url, {
-        signal: controller.signal,
-        redirect: 'follow'
-      });
-    } catch (fetchError) {
-      if (fetchError.name === 'AbortError') {
-        throw new Error('GASへのリクエストがタイムアウトしました。');
-      }
-      throw fetchError;
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    if (!res.ok) {
-      console.error(`❌ HTTPエラー: ${res.status} ${res.statusText}`);
-      await interaction.editReply({
-        content: '⚠️ GASとの通信に失敗しました。',
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    const text = await res.text();
-    console.log('📦 受信したレスポンス:', text);
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (parseError) {
-      console.error('❌ JSON パースエラー:', parseError);
-      await interaction.editReply({
-        content: '⚠️ GAS から不正なデータが返されました。',
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    if (data.error) {
-      console.warn('⚠️ GAS からのエラー:', data.error);
-      await interaction.editReply({
-        content: `❌ ${data.error}`,
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
-      await interaction.editReply({
-        content: '⚠️ 該当するPT情報が見つかりませんでした。',
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    const description = data.entries
-      .map(entry => `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`)
-      .join('\n');
-
-    const embed = new EmbedBuilder()
-      .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
-      .setColor(0x00AE86)
-      .setDescription(description)
-      .setFooter({ text: '参加or訂正は該当URLから' });
-
-    console.log(`✅ 埋め込みメッセージを送信しました: ${data.title}`);
-    await interaction.editReply({ embeds: [embed] });
-
-  } catch (error) {
-    console.error('❌ GAS からのデータ取得に失敗しました:', error);
-
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({
-        content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
-        flags: MessageFlags.Ephemeral
-      }).catch(console.error);
-    } else if (interaction.isRepliable()) {
-      await interaction.reply({
-        content: `⚠️ エラー: ${error.message || '情報取得中に問題が発生しました。'}`,
-        flags: MessageFlags.Ephemeral
-      }).catch(console.error);
-    }
+    res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('GASへのリクエストがタイムアウトしました。');
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
+
+  if (!res.ok) throw new Error(`GAS通信エラー: ${res.status} ${res.statusText}`);
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('GASから不正なJSONが返されました');
+  }
+
+  if (data.error) throw new Error(data.error);
+  if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
+    throw new Error('該当するPT情報が見つかりませんでした');
+  }
+
+  return data;
 }
 
-module.exports = { handlePTInfo };
+// EmbedBuilderを返す関数
+function createEmbedFromData(data) {
+  const description = data.entries
+    .map(entry => `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`)
+    .join('\n');
+
+  const embed = new EmbedBuilder()
+    .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
+    .setColor(0x00AE86)
+    .setDescription(description)
+    .setFooter({ text: '参加or訂正は該当URLから' });
+
+  return embed;
+}
+
+module.exports = { handlePTInfo, createEmbedFromData };
