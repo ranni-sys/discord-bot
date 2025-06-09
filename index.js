@@ -15,9 +15,9 @@ const client = new Client({
 
 // 起動時の処理
 client.once('ready', async () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 
-  // 起動時にスラッシュコマンド登録（Render無料プラン対策）
+  // 起動時にスラッシュコマンド登録
   try {
     await registerCommands();
     console.log('✅ スラッシュコマンドを登録しました');
@@ -50,8 +50,23 @@ async function handlePTInfo(interaction) {
   try {
     await interaction.deferReply({ ephemeral: true });
 
-    const res = await fetch(`${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`);
-    const data = await res.json();
+    const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
+    console.log("🔗 Fetching URL:", url);
+
+    const res = await fetch(url);
+    const text = await res.text();
+    console.log("📦 Raw response text:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error("❌ JSON パースエラー:", parseError);
+      await interaction.editReply({
+        content: '⚠️ GAS から不正なデータが返されました。'
+      });
+      return;
+    }
 
     if (data.error) {
       await interaction.editReply({ content: `❌ ${data.error}` });
