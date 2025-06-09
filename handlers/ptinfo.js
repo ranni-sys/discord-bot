@@ -6,18 +6,19 @@ function escapeMarkdown(text) {
 }
 
 async function handlePTInfo(interaction) {
-  const ptNumber = interaction.options.getString('ptnumber');
+  try {
+    const ptNumber = interaction.options.getString('ptnumber');
 
-  if (!ptNumber) {
-    console.warn('⚠️ PT番号が未指定でリクエストされました');
-    if (interaction.isRepliable()) {
-      await interaction.reply({
-        content: '❗ PT番号が指定されていません。',
-        ephemeral: true
-      }).catch(console.error);
+    if (!ptNumber) {
+      console.warn('⚠️ PT番号が未指定でリクエストされました');
+      if (interaction.isRepliable()) {
+        await interaction.reply({
+          content: '❗ PT番号が指定されていません。',
+          ephemeral: true
+        }).catch(console.error);
+      }
+      return;
     }
-    return;
-  }
 
     const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
     console.log(`🌐 GAS にリクエスト送信中: ${url}`);
