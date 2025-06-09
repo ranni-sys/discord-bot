@@ -1,3 +1,5 @@
+console.log('discord.js version:', require('discord.js').version);
+
 require('dotenv').config();
 const { Client, GatewayIntentBits, InteractionResponseFlags } = require('discord.js');
 const { handlePTInfo } = require('./handlers/ptinfo');
