@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 const { EmbedBuilder } = require('discord.js');
 
 function escapeMarkdown(text) {
-  return text?.replace(/([*_`~|])/g, '\\$1') ?? '―';
+  return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
 async function handlePTInfo(interaction) {
