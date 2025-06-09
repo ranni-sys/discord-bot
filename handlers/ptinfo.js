@@ -49,17 +49,11 @@ async function handlePTInfo(ptNumber) {
 // EmbedBuilderを返す関数
 function createEmbedFromData(data) {
   const separator = '　'; // 全角スペース1文字
-  const descriptionLines = data.entries.map(entry =>
-    `${entry.label} | ${escapeMarkdown(entry.value)}`
-  );
-
-  // 空行を挿入する位置（0-based index）
-  const insertAt = [2, 7, 12, 18]; // 表示構成にあわせて調整済み
-
-  insertAt.reverse().forEach(index => {
-    if (index <= descriptionLines.length) {
-      descriptionLines.splice(index, 0, separator);
+  const descriptionLines = data.entries.map(entry => {
+    if (entry.type === 'separator') {
+      return separator; // 空行として全角スペース1文字
     }
+    return `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`;
   });
 
   const embed = new EmbedBuilder()
