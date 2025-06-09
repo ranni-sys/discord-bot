@@ -6,10 +6,10 @@ function escapeMarkdown(text) {
 }
 
 // GASからPT情報を取得しJSONで返す関数
-async function handlePTInfo(ptNumber) {
-  if (!ptNumber) throw new Error('PT番号が指定されていません');
+async function handlePTInfo(ptnumber) {
+  if (!ptnumber) throw new Error('PT番号が指定されていません');
 
-  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptNumber)}`;
+  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptnumber)}`;
   console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
   const controller = new AbortController();
