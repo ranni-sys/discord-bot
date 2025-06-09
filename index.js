@@ -1,85 +1,87 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, MessageFlags } = require('discord.js');
-const { registerCommands } = require('./deploy-commands');
-const { handlePTInfo } = require('./handlers/ptinfo');
+const { Client, GatewayIntentBits } = require('discord.js');
+const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
   ]
 });
 
-client.once('ready', async () => {
-  const botTag = client.user.tag;
-  console.log(`✅ Discord Bot Ready! Logged in as ${botTag}`);
-
-  try {
-    await registerCommands();
-    console.log('✅ スラッシュコマンドの登録に成功しました');
-  } catch (err) {
-    console.error('❌ スラッシュコマンドの登録に失敗しました:', err);
-  }
+client.once('ready', () => {
+  console.log(`✅ Discord Bot Ready! Logged in as ${client.user.tag}`);
 });
 
 client.on('interactionCreate', async interaction => {
-  try {
-    if (!interaction.isCommand()) return;
+  if (!interaction.isCommand()) return;
 
-    if (interaction.commandName === 'ptinfo') {
+  if (interaction.commandName === 'ptinfo') {
+    try {
       const ptNumber = interaction.options.getString('ptnumber');
-      console.log(`📥 /ptinfo コマンドを受信: ${interaction.user.tag} が ${ptNumber} をリクエスト`);
 
-      // deferReplyで即時応答（非公開メッセージ）
+      // 即時応答（非公開）
       await interaction.deferReply({ ephemeral: true });
 
-      // タイムアウト監視付きでhandlePTInfoを実行
+      // タイムアウト用Promise
       const timeout = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout after 3s')), 3000);
       });
 
-      await Promise.race([
-        handlePTInfo(interaction),
+      // PT情報取得をPromise.raceでタイムアウト制御
+      const data = await Promise.race([
+        handlePTInfo(ptNumber),
         timeout
       ]);
-    }
-  } catch (err) {
-    console.error('❌ インタラクションの処理中にエラーが発生しました:', err);
 
-    try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.editReply({
-          content: '⚠️ エラーが発生しました。しばらくして再試行してください。',
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.isRepliable()) {
-        await interaction.reply({
-          content: '⚠️ コマンド処理中に問題が発生しました。',
-          flags: MessageFlags.Ephemeral
-        });
+      // 正常取得した場合、ephemeralメッセージを編集（任意）
+      await interaction.editReply({
+        content: '✅ PT情報を正常に取得しました。',
+        ephemeral: true
+      });
+
+      // 通常チャットに埋め込みメッセージ送信
+      const embed = createEmbedFromData(data);
+      await interaction.followUp({ embeds: [embed], ephemeral: false });
+
+    } catch (err) {
+      if (err.message === 'Timeout after 3s') {
+        // タイムアウト時はephemeralメッセージで通知
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。',
+            ephemeral: true
+          });
+        } else if (interaction.isRepliable()) {
+          await interaction.reply({
+            content: '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。',
+            ephemeral: true
+          });
+        }
+
+        // タイムアウトしてもhandlePTInfoを再度呼んで埋め込みだけ送る（GASは非同期応答想定）
+        const ptNumber = interaction.options.getString('ptnumber');
+        const data = await handlePTInfo(ptNumber);
+        const embed = createEmbedFromData(data);
+        await interaction.followUp({ embeds: [embed], ephemeral: false });
+      } else {
+        // その他エラー処理
+        console.error(err);
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply({
+            content: '❌ エラーが発生しました。しばらくして再試行してください。',
+            ephemeral: true
+          });
+        } else if (interaction.isRepliable()) {
+          await interaction.reply({
+            content: '❌ エラーが発生しました。',
+            ephemeral: true
+          });
+        }
       }
-    } catch (innerErr) {
-      console.error('⚠️ エラーハンドリング中に失敗しました:', innerErr);
     }
   }
 });
 
-client.login(process.env.DISCORD_TOKEN).catch(err => {
-  console.error('❌ Discordへのログインに失敗しました:', err);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('❌ 未処理の例外 (uncaughtException):', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ 未処理のPromise拒否 (unhandledRejection):', reason);
-});
-
-setInterval(() => {
-  if (!client || !client.isReady()) {
-    console.warn('⚠️ BotがReady状態ではありません');
-  }
-}, 10000);
+client.login(process.env.DISCORD_TOKEN).catch(console.error);
