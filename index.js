@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
-const { handleProgress } = require('./handlers/progress');
+const { handleProgress, createProgressEmbed } = require('./handlers/progress');
 const { registerCommands } = require('./deploy-commands');
 
 // スラッシュコマンド登録
@@ -54,9 +54,10 @@ client.on('interactionCreate', async interaction => {
       const targetName = interaction.options.getString('targetname');
       await interaction.deferReply({ ephemeral: true });
 
-      const result = await handleProgress(targetName || '');
+      const data = await handleProgress(targetName || '');
+      const embed = createProgressEmbed(data);
 
-      await interaction.editReply(result);
+      await interaction.editReply({ embeds: [embed] });
     }
 
   } catch (err) {
@@ -64,7 +65,7 @@ client.on('interactionCreate', async interaction => {
 
     const errorMessage = err.message === 'Timeout after 3s'
       ? '⚠️ 処理がタイムアウトしました。'
-      : '❌ エラーが発生しました。しばらくして再試行してください。';
+      : `❌ エラーが発生しました: ${err.message}`;
 
     try {
       if (interaction.deferred || interaction.replied) {
