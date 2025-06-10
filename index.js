@@ -27,44 +27,48 @@ client.once('ready', async () => {
 });
 
 // フォーム送信通知APIエンドポイント
-// /notify エンドポイントの改善版
+// フォーム送信通知APIエンドポイント（ptNumberを文字列として明示的に扱う＆リトライ付き）
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
+    const ptNumber = String(data.ptNumber); // 明示的に文字列として扱う
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
     const channel = await client.channels.fetch(channelId);
+
     if (!channel) {
       return res.status(404).send('通知先チャンネルが見つかりません');
     }
 
-    const tryGetPTInfo = async (ptNumber, retries = 5, delay = 10000) => {
-      for (let i = 0; i < retries; i++) {
+    // GAS取得用のリトライ関数
+    async function retryHandlePTInfo(ptNumber, maxRetries = 5, delayMs = TIMEOUT_MS) {
+      for (let i = 0; i < maxRetries; i++) {
         try {
           return await handlePTInfo(ptNumber);
         } catch (err) {
-          if (i === retries - 1) throw err;
-          await new Promise(resolve => setTimeout(resolve, delay));
+          if (i === maxRetries - 1) throw err;
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
-    };
-
-    let embed;
-    try {
-      const result = await tryGetPTInfo(data.ptNumber);
-      embed = createEmbedFromData(result);
-    } catch (err) {
-      console.error('handlePTInfo取得失敗:', err);
-      return res.status(500).send(`[${data.ptNumber}]の募集は現在見つかりません。`);
     }
 
-    await channel.send({ content: `📝 **新しいPT募集フォーム回答**`, embeds: [embed] });
-    res.status(200).send('通知を送信しました');
+    let fetchedData;
+    try {
+      fetchedData = await retryHandlePTInfo(ptNumber);
+    } catch (err) {
+      console.error('PT情報取得に失敗:', err);
+      return res.status(500).send(`通知送信エラー: ${err.message}`);
+    }
 
+    const embed = createEmbedFromData(fetchedData);
+    await channel.send({ embeds: [embed] });
+
+    res.status(200).send('通知を送信しました');
   } catch (error) {
-    console.error('通知送信エラー:', error);
+    console.error('通知送信中に予期せぬエラー:', error);
     res.status(500).send('通知送信中にエラーが発生しました');
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
