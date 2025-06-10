@@ -27,6 +27,7 @@ client.once('ready', async () => {
 });
 
 // フォーム送信通知APIエンドポイント
+// /notify エンドポイントの改善版
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
@@ -36,15 +37,29 @@ app.post('/notify', async (req, res) => {
       return res.status(404).send('通知先チャンネルが見つかりません');
     }
 
-    // --- ここで3秒待機を挿入 ---
-    await new Promise(resolve => setTimeout(resolve, TIMEOUT_MS));
+    const tryGetPTInfo = async (ptNumber, retries = 5, delay = 10000) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await handlePTInfo(ptNumber);
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    };
 
-    // 最新のPT情報を取得
-    const ptData = await handlePTInfo(data.ptNumber);
-    const embed = createEmbedFromData(ptData);
+    let embed;
+    try {
+      const result = await tryGetPTInfo(data.ptNumber);
+      embed = createEmbedFromData(result);
+    } catch (err) {
+      console.error('handlePTInfo取得失敗:', err);
+      return res.status(500).send(`[${data.ptNumber}]の募集は現在見つかりません。`);
+    }
 
-    await channel.send({ embeds: [embed] });
+    await channel.send({ content: `📝 **新しいPT募集フォーム回答**`, embeds: [embed] });
     res.status(200).send('通知を送信しました');
+
   } catch (error) {
     console.error('通知送信エラー:', error);
     res.status(500).send('通知送信中にエラーが発生しました');
