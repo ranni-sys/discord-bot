@@ -23,7 +23,7 @@ client.on('interactionCreate', async interaction => {
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 3s')), 3000));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 3s')), 1000));
 
       const data = await Promise.race([
         handlePTInfo(ptNumber),
