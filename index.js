@@ -30,20 +30,17 @@ client.once('ready', async () => {
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
-    // data例: { ptNumber: '1234', answers: { '質問1': ['回答1'], ... } }
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
     const channel = await client.channels.fetch(channelId);
     if (!channel) {
       return res.status(404).send('通知先チャンネルが見つかりません');
     }
 
-    let content = `📝 **新しいPT募集フォーム回答**\nPT番号: \`${data.ptNumber}\`\n`;
-    for (const question in data.answers) {
-      const answerText = data.answers[question].join('\n');
-      content += `**${question}**: ${answerText}\n`;
-    }
+    // PT情報取得（ptinfoと同じ構造で通知）
+    const ptInfoData = await handlePTInfo(data.ptNumber);
+    const embed = createEmbedFromData(ptInfoData);
 
-    await channel.send(content);
+    await channel.send({ content: '📝 **新しいPT募集フォーム回答**', embeds: [embed] });
     res.status(200).send('通知を送信しました');
   } catch (error) {
     console.error('通知送信エラー:', error);
@@ -115,7 +112,6 @@ client.on('interactionCreate', async interaction => {
 
     await sendError();
 
-    // タイムアウト時に followUp だけ別途実行
     if (err.message === 'Timeout after 10s') {
       try {
         const data = await handlePTInfo(ptNumber);
