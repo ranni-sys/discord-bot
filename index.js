@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
-
+const { registerCommands } = require('./deploy-commands');
 const TIMEOUT_MS = 10000;
 
 const client = new Client({
@@ -12,8 +12,14 @@ const client = new Client({
   ]
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Discord Bot Ready! Logged in as ${client.user.tag}`);
+
+  try {
+    await registerCommands();
+  } catch (err) {
+    console.error('スラッシュコマンド登録時にエラー:', err);
+  }
 });
 
 client.on('interactionCreate', async interaction => {
