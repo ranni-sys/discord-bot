@@ -73,7 +73,7 @@ function createEmbedComponentsFromData(data) {
     new ButtonBuilder()
       .setLabel('参加')
       .setStyle(ButtonStyle.Link)
-      .setURL(data.joinUrl || 'https://example.com/join'),
+      .setURL(data.joinUrl || 'https://forms.gle/HYkr84wHRwyinsxB9'),
 
     new ButtonBuilder()
       .setLabel('削除')
