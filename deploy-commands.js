@@ -6,7 +6,7 @@ const commands = [
     .setName('ptinfo')
     .setDescription('指定したPT番号の情報を取得します')
     .addStringOption(option =>
-      option.setName('ptnumber')
+      option.setName('ptNumber')
         .setDescription('取得したいPT番号（例: PT1）')
         .setRequired(true)
     )
