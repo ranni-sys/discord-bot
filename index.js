@@ -23,7 +23,7 @@ client.on('interactionCreate', async interaction => {
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 3s')), 10000));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), 10000));
 
       const data = await Promise.race([
         handlePTInfo(ptNumber),
@@ -46,7 +46,7 @@ client.on('interactionCreate', async interaction => {
       console.error('isRepliable:', interaction.isRepliable());
       console.error('Error:', err);
 
-      const errorMessage = err.message === 'Timeout after 3s' ?
+      const errorMessage = err.message === 'Timeout after 10s' ?
         '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。' :
         '❌ エラーが発生しました。しばらくして再試行してください。';
 
@@ -64,7 +64,7 @@ client.on('interactionCreate', async interaction => {
         }
       }
 
-      if (err.message === 'Timeout after 3s') {
+      if (err.message === 'Timeout after 10s') {
         try {
           const data = await handlePTInfo(ptNumber);
           const embed = createEmbedFromData(data);
