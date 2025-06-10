@@ -60,7 +60,10 @@ app.post('/notify', async (req, res) => {
     }
 
     const embed = createEmbedFromData(fetchedData);
-    await channel.send({ embeds: [embed] });
+    await channel.send({
+  content: "新しいパーティの募集があります",
+  embeds: [embed],
+});
 
     res.status(200).send('通知を送信しました');
   } catch (error) {
