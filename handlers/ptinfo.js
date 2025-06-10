@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
@@ -46,8 +46,8 @@ async function handlePTInfo(ptnumber) {
   return data;
 }
 
-// EmbedBuilderとボタンを返す関数
-function createEmbedComponentsFromData(data) {
+// EmbedBuilderを返す関数
+function createEmbedFromData(data) {
   const separator = '　'; // 全角スペース1文字
   const descriptionLines = data.entries.map(entry => {
     if (entry.type === 'separator') {
@@ -61,6 +61,13 @@ function createEmbedComponentsFromData(data) {
     .setColor(0x00AE86)
     .setDescription(descriptionLines.join('\n'))
     .setFooter({ text: '参加or訂正は該当URLから' });
+
+  return embed;
+}
+
+// EmbedBuilderとボタンを返す関数
+function createEmbedComponentsFromData(data) {
+  const embed = createEmbedFromData(data);
 
   const buttons = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -77,4 +84,4 @@ function createEmbedComponentsFromData(data) {
   return { embed, components: [buttons] };
 }
 
-module.exports = { handlePTInfo, createEmbedFromData };
+module.exports = { handlePTInfo, createEmbedFromData, createEmbedComponentsFromData };
