@@ -9,7 +9,7 @@ function escapeMarkdown(text) {
 async function handlePTInfo(ptnumber) {
   if (!ptnumber) throw new Error('PT番号が指定されていません');
 
-  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptnumber)}`;
+  const url = `${process.env.GAS_URL}?ptnumber=${encodeURIComponent(ptnumber)}`;
   console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
   const controller = new AbortController();
