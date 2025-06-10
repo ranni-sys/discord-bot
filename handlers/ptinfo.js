@@ -46,8 +46,8 @@ async function handlePTInfo(ptnumber) {
   return data;
 }
 
-// EmbedBuilderを返す関数
-function createEmbedFromData(data) {
+// EmbedBuilderとボタンを返す関数
+function createEmbedComponentsFromData(data) {
   const separator = '　'; // 全角スペース1文字
   const descriptionLines = data.entries.map(entry => {
     if (entry.type === 'separator') {
@@ -62,7 +62,19 @@ function createEmbedFromData(data) {
     .setDescription(descriptionLines.join('\n'))
     .setFooter({ text: '参加or訂正は該当URLから' });
 
-  return embed;
+  const buttons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('参加')
+      .setStyle(ButtonStyle.Link)
+      .setURL(data.joinUrl || 'https://example.com/join'),
+
+    new ButtonBuilder()
+      .setLabel('削除')
+      .setStyle(ButtonStyle.Link)
+      .setURL(data.deleteUrl || 'https://example.com/delete')
+  );
+
+  return { embed, components: [buttons] };
 }
 
 module.exports = { handlePTInfo, createEmbedFromData };
