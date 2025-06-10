@@ -36,11 +36,14 @@ app.post('/notify', async (req, res) => {
       return res.status(404).send('通知先チャンネルが見つかりません');
     }
 
-    // PT情報取得（ptinfoと同じ構造で通知）
-    const ptInfoData = await handlePTInfo(data.ptNumber);
-    const embed = createEmbedFromData(ptInfoData);
+    // --- ここで3秒待機を挿入 ---
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-    await channel.send({ content: '📝 **新しいPT募集フォーム回答**', embeds: [embed] });
+    // 最新のPT情報を取得
+    const ptData = await handlePTInfo(data.ptNumber);
+    const embed = createEmbedFromData(ptData);
+
+    await channel.send({ embeds: [embed] });
     res.status(200).send('通知を送信しました');
   } catch (error) {
     console.error('通知送信エラー:', error);
