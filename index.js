@@ -40,7 +40,7 @@ app.post('/notify', async (req, res) => {
     }
 
     // GAS取得用のリトライ関数
-    async function retryHandlePTInfo(ptNumber, maxRetries = 10, delayMs = TIMEOUT_MS) {
+    async function retryHandlePTInfo(ptNumber, maxRetries = 5, delayMs = TIMEOUT_MS) {
       for (let i = 0; i < maxRetries; i++) {
         try {
           return await handlePTInfo(ptNumber);
