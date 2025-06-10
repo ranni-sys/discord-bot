@@ -6,10 +6,10 @@ function escapeMarkdown(text) {
 }
 
 // GASからPT情報を取得しJSONで返す関数
-async function handleprogress(membername) {
-  if (!membername) throw new Error('家名が指定されていません');
+async function handlePTInfo(ptnumber) {
+  if (!ptnumber) throw new Error('PT番号が指定されていません');
 
-  const url = `${process.env.GAS_URL}?membername=${encodeURIComponent(membername)}`;
+  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptnumber)}`;
   console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
   const controller = new AbortController();
@@ -40,7 +40,7 @@ async function handleprogress(membername) {
 
   if (data.error) throw new Error(data.error);
   if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
-    throw new Error('該当する家名のクリア状況が見つかりませんでした');
+    throw new Error('該当するPT情報が見つかりませんでした');
   }
 
   return data;
