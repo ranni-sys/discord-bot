@@ -16,60 +16,73 @@ client.once('ready', () => {
 
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
+  if (interaction.commandName !== 'ptinfo') return;
 
-  if (interaction.commandName === 'ptinfo') {
-    const ptNumber = interaction.options.getString('ptnumber');
+  const ptNumber = interaction.options.getString('ptnumber');
 
-    try {
-      await interaction.deferReply({ ephemeral: true });
+  try {
+    await interaction.deferReply({ ephemeral: true });
 
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), 10000));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), 10000));
 
-      const data = await Promise.race([
-        handlePTInfo(ptNumber),
-        timeout,
-      ]);
+    const data = await Promise.race([
+      handlePTInfo(ptNumber),
+      timeout,
+    ]);
 
-      await interaction.editReply({
-        content: '✅ PT情報を正常に取得しました。',
-      });
+    await interaction.editReply({ content: '✅ PT情報を正常に取得しました。' });
 
-      const embed = createEmbedFromData(data);
-      await interaction.followUp({ embeds: [embed], ephemeral: false });
+    const embed = createEmbedFromData(data);
+    await interaction.followUp({ embeds: [embed], ephemeral: false });
 
-    } catch (err) {
-      // interactionの状態をログに出す
-      console.error('--- Interaction state ---');
-      console.error('deferred:', interaction.deferred);
-      console.error('replied:', interaction.replied);
-      console.error('ephemeral:', interaction.ephemeral);
-      console.error('isRepliable:', interaction.isRepliable());
-      console.error('Error:', err);
+  } catch (err) {
+    console.error('--- Interaction state ---');
+    console.error('deferred:', interaction.deferred);
+    console.error('replied:', interaction.replied);
+    console.error('ephemeral:', interaction.ephemeral);
+    console.error('isRepliable:', interaction.isRepliable());
+    console.error('Error:', err);
 
-      const errorMessage = err.message === 'Timeout after 10s' ?
-        '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。' :
-        '❌ エラーが発生しました。しばらくして再試行してください。';
+    const errorMessage = err.message === 'Timeout after 10s'
+      ? '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。'
+      : '❌ エラーが発生しました。しばらくして再試行してください。';
 
+    const sendError = async () => {
       if (interaction.deferred || interaction.replied) {
         try {
           await interaction.editReply({ content: errorMessage });
         } catch (e) {
-          console.error('editReply失敗:', e);
+          if (e.code === 10062) {
+            console.warn('editReply失敗（Unknown interaction, 無視）');
+          } else {
+            console.error('editReply失敗:', e);
+          }
         }
       } else {
         try {
           await interaction.reply({ content: errorMessage, ephemeral: true });
         } catch (e) {
-          console.error('reply失敗:', e);
+          if (e.code === 10062) {
+            console.warn('reply失敗（Unknown interaction, 無視）');
+          } else {
+            console.error('reply失敗:', e);
+          }
         }
       }
+    };
 
-      if (err.message === 'Timeout after 10s') {
-        try {
-          const data = await handlePTInfo(ptNumber);
-          const embed = createEmbedFromData(data);
-          await interaction.followUp({ embeds: [embed], ephemeral: false });
-        } catch (e) {
+    await sendError();
+
+    // タイムアウト時に followUp だけ別途実行
+    if (err.message === 'Timeout after 10s') {
+      try {
+        const data = await handlePTInfo(ptNumber);
+        const embed = createEmbedFromData(data);
+        await interaction.followUp({ embeds: [embed], ephemeral: false });
+      } catch (e) {
+        if (e.code === 10062) {
+          console.warn('followUp失敗（Unknown interaction, 無視）');
+        } else {
           console.error('フォローアップ送信失敗:', e);
         }
       }
