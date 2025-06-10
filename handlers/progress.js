@@ -5,11 +5,10 @@ function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
-// GASからPT情報を取得しJSONで返す関数
-async function handlePTInfo(ptnumber) {
-  if (!ptnumber) throw new Error('PT番号が指定されていません');
+async function handleprogress(membername) {
+  if (!membername) throw new Error('家名が指定されていません');
 
-  const url = `${process.env.GAS_URL}?PTnumber=${encodeURIComponent(ptnumber)}`;
+  const url = `${process.env.GAS_URL}?membername=${encodeURIComponent(membername)}`;
   console.log(`🌐 GAS にリクエスト送信中: ${url}`);
 
   const controller = new AbortController();
@@ -40,7 +39,7 @@ async function handlePTInfo(ptnumber) {
 
   if (data.error) throw new Error(data.error);
   if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
-    throw new Error('該当するPT情報が見つかりませんでした');
+    throw new Error('該当する家名のクリア状況が見つかりませんでした');
   }
 
   return data;
@@ -57,12 +56,12 @@ function createEmbedFromData(data) {
   });
 
   const embed = new EmbedBuilder()
-    .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
+    .setTitle(`クリア状況: ${escapeMarkdown(data.title)}`)
     .setColor(0x00AE86)
     .setDescription(descriptionLines.join('\n'))
-    .setFooter({ text: '参加or訂正は該当URLから' });
+    .setFooter({ text: '情報は古い可能性があります' });
 
   return embed;
 }
 
-module.exports = { handlePTInfo, createEmbedFromData };
+module.exports = { handleprogress, createEmbedFromData };
