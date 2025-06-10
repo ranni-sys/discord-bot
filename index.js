@@ -37,7 +37,7 @@ app.post('/notify', async (req, res) => {
     }
 
     // --- ここで3秒待機を挿入 ---
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, TIMEOUT_MS));
 
     // 最新のPT情報を取得
     const ptData = await handlePTInfo(data.ptNumber);
