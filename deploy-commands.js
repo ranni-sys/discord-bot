@@ -17,31 +17,33 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 async function registerCommands() {
   try {
-    console.log('🔄 スラッシュコマンドを登録中...');
+    console.log('🔄 既存のスラッシュコマンドを削除中...');
 
-    // 既存のアプリケーションコマンドを取得
-const existingCommands = await rest.get(
-  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
-);
-
-for (const command of existingCommands) {
-  if (commands.find(cmd => cmd.name === command.name)) {
-    console.log(`🗑️ 既存コマンド '${command.name}' を削除中...`);
-    await rest.delete(
-      Routes.applicationGuildCommand(process.env.CLIENT_ID, process.env.GUILD_ID, command.id)
+    const existingCommands = await rest.get(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
     );
-  }
-}
 
-await rest.put(
-  Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-  { body: commands }
-);
+    for (const command of existingCommands) {
+      console.log(`🗑️ コマンド '${command.name}' を削除中...`);
+      await rest.delete(
+        Routes.applicationGuildCommand(process.env.CLIENT_ID, process.env.GUILD_ID, command.id)
+      );
+    }
 
+    console.log('🆕 スラッシュコマンドを登録中...');
+
+    await rest.put(
+      Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+      { body: commands }
+    );
 
     console.log('✅ スラッシュコマンドを登録しました！');
   } catch (error) {
-    console.error('❌ スラッシュコマンド登録中にエラーが発生しました:', error);
+    if (error.code && error.code === 50001) {
+      console.error('❌ アクセス許可が不足しています。Botに適切な権限が付与されているか確認してください。');
+    } else {
+      console.error('❌ スラッシュコマンド登録中にエラーが発生しました:', error);
+    }
   }
 }
 
