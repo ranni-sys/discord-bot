@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
+const { handlePTInfo, createEmbedComponentsFromData } = require('./handlers/ptinfo');
 const { registerCommands } = require('./deploy-commands');
 const TIMEOUT_MS = 10000;
 
@@ -27,11 +27,10 @@ client.once('ready', async () => {
 });
 
 // フォーム送信通知APIエンドポイント
-// フォーム送信通知APIエンドポイント（ptNumberを文字列として明示的に扱う＆リトライ付き）
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
-    const ptNumber = String(data.ptNumber); // 明示的に文字列として扱う
+    const ptNumber = String(data.ptNumber);
     const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
     const channel = await client.channels.fetch(channelId);
 
@@ -39,7 +38,6 @@ app.post('/notify', async (req, res) => {
       return res.status(404).send('通知先チャンネルが見つかりません');
     }
 
-    // GAS取得用のリトライ関数
     async function retryHandlePTInfo(ptNumber, maxRetries = 5, delayMs = TIMEOUT_MS) {
       for (let i = 0; i < maxRetries; i++) {
         try {
@@ -59,11 +57,12 @@ app.post('/notify', async (req, res) => {
       return res.status(500).send(`通知送信エラー: ${err.message}`);
     }
 
-    const embed = createEmbedFromData(fetchedData);
+    const { embed, components } = createEmbedComponentsFromData(fetchedData);
     await channel.send({
-  content: "新しいパーティの募集があります",
-  embeds: [embed],
-});
+      content: "新しいパーティの募集があります",
+      embeds: [embed],
+      components: components
+    });
 
     res.status(200).send('通知を送信しました');
   } catch (error) {
@@ -71,7 +70,6 @@ app.post('/notify', async (req, res) => {
     res.status(500).send('通知送信中にエラーが発生しました');
   }
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -96,8 +94,8 @@ client.on('interactionCreate', async interaction => {
 
     await interaction.editReply({ content: '✅ PT情報を正常に取得しました。' });
 
-    const embed = createEmbedFromData(data);
-    await interaction.followUp({ embeds: [embed], ephemeral: false });
+    const { embed, components } = createEmbedComponentsFromData(data);
+    await interaction.followUp({ embeds: [embed], components: components, ephemeral: false });
 
   } catch (err) {
     console.error('--- Interaction state ---');
@@ -140,8 +138,8 @@ client.on('interactionCreate', async interaction => {
     if (err.message === 'Timeout after 10s') {
       try {
         const data = await handlePTInfo(ptNumber);
-        const embed = createEmbedFromData(data);
-        await interaction.followUp({ embeds: [embed], ephemeral: false });
+        const { embed, components } = createEmbedComponentsFromData(data);
+        await interaction.followUp({ embeds: [embed], components: components, ephemeral: false });
       } catch (e) {
         if (e.code === 10062) {
           console.warn('followUp失敗（Unknown interaction, 無視）');
