@@ -2,6 +2,8 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
 
+const TIMEOUT_MS = 10000;
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -23,7 +25,7 @@ client.on('interactionCreate', async interaction => {
   try {
     await interaction.deferReply({ ephemeral: true });
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), 10000));
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), TIMEOUT_MS));
 
     const data = await Promise.race([
       handlePTInfo(ptNumber),
