@@ -1,68 +1,131 @@
-const fetch = require('node-fetch');
-const { EmbedBuilder } = require('discord.js');
+require('dotenv').config();
+const { Client, GatewayIntentBits } = require('discord.js');
+const { handlePTInfo, createEmbedFromData } = require('./handlers/ptinfo');
+const { registerCommands } = require('./deploy-commands');
+const TIMEOUT_MS = 10000;
 
-function escapeMarkdown(text) {
-  return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
-}
+const express = require('express');
+const app = express();
+app.use(express.json());
 
-// GASからPT情報を取得しJSONで返す関数
-async function handlePTInfo(ptnumber) {
-  if (!ptnumber) throw new Error('PT番号が指定されていません');
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ]
+});
 
-  const url = `${process.env.GAS_URL}?ptnumber=${encodeURIComponent(ptnumber)}`;
-  console.log(`🌐 GAS にリクエスト送信中: ${url}`);
+client.once('ready', async () => {
+  console.log(`✅ Discord Bot Ready! Logged in as ${client.user.tag}`);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  let res;
   try {
-    res = await fetch(url, {
-      signal: controller.signal,
-      redirect: 'follow',
-    });
+    await registerCommands();
   } catch (err) {
-    if (err.name === 'AbortError') throw new Error('GASへのリクエストがタイムアウトしました。');
-    throw err;
-  } finally {
-    clearTimeout(timeout);
+    console.error('スラッシュコマンド登録時にエラー:', err);
   }
+});
 
-  if (!res.ok) throw new Error(`GAS通信エラー: ${res.status} ${res.statusText}`);
-
-  const text = await res.text();
-  let data;
+// フォーム送信通知APIエンドポイント
+app.post('/notify', async (req, res) => {
   try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error('GASから不正なJSONが返されました');
-  }
-
-  if (data.error) throw new Error(data.error);
-  if (!data.entries || !Array.isArray(data.entries) || data.entries.length === 0) {
-    throw new Error('該当するPT情報が見つかりませんでした');
-  }
-
-  return data;
-}
-
-// EmbedBuilderを返す関数
-function createEmbedFromData(data) {
-  const separator = '　'; // 全角スペース1文字
-  const descriptionLines = data.entries.map(entry => {
-    if (entry.type === 'separator') {
-      return separator; // 空行として全角スペース1文字
+    const data = req.body;
+    const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
+    const channel = await client.channels.fetch(channelId);
+    if (!channel) {
+      return res.status(404).send('通知先チャンネルが見つかりません');
     }
-    return `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`;
-  });
 
-  const embed = new EmbedBuilder()
-    .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
-    .setColor(0x00AE86)
-    .setDescription(descriptionLines.join('\n'))
-    .setFooter({ text: '参加or訂正は該当URLから' });
+    // PT情報取得（ptinfoと同じ構造で通知）
+    const ptInfoData = await handlePTInfo(data.ptNumber);
+    const embed = createEmbedFromData(ptInfoData);
 
-  return embed;
-}
+    await channel.send({ content: '📝 **新しいPT募集フォーム回答**', embeds: [embed] });
+    res.status(200).send('通知を送信しました');
+  } catch (error) {
+    console.error('通知送信エラー:', error);
+    res.status(500).send('通知送信中にエラーが発生しました');
+  }
+});
 
-module.exports = { handlePTInfo, createEmbedFromData };
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 通知APIサーバー起動中 (ポート: ${PORT})`);
+});
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isCommand()) return;
+  if (interaction.commandName !== 'ptinfo') return;
+
+  const ptNumber = interaction.options.getString('ptnumber');
+
+  try {
+    await interaction.deferReply({ ephemeral: true });
+
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), TIMEOUT_MS));
+
+    const data = await Promise.race([
+      handlePTInfo(ptNumber),
+      timeout,
+    ]);
+
+    await interaction.editReply({ content: '✅ PT情報を正常に取得しました。' });
+
+    const embed = createEmbedFromData(data);
+    await interaction.followUp({ embeds: [embed], ephemeral: false });
+
+  } catch (err) {
+    console.error('--- Interaction state ---');
+    console.error('deferred:', interaction.deferred);
+    console.error('replied:', interaction.replied);
+    console.error('ephemeral:', interaction.ephemeral);
+    console.error('isRepliable:', interaction.isRepliable());
+    console.error('Error:', err);
+
+    const errorMessage = err.message === 'Timeout after 10s'
+      ? '⚠️ 処理がタイムアウトしました。結果は通常チャットに表示します。'
+      : '❌ エラーが発生しました。しばらくして再試行してください。';
+
+    const sendError = async () => {
+      if (interaction.deferred || interaction.replied) {
+        try {
+          await interaction.editReply({ content: errorMessage });
+        } catch (e) {
+          if (e.code === 10062) {
+            console.warn('editReply失敗（Unknown interaction, 無視）');
+          } else {
+            console.error('editReply失敗:', e);
+          }
+        }
+      } else {
+        try {
+          await interaction.reply({ content: errorMessage, ephemeral: true });
+        } catch (e) {
+          if (e.code === 10062) {
+            console.warn('reply失敗（Unknown interaction, 無視）');
+          } else {
+            console.error('reply失敗:', e);
+          }
+        }
+      }
+    };
+
+    await sendError();
+
+    if (err.message === 'Timeout after 10s') {
+      try {
+        const data = await handlePTInfo(ptNumber);
+        const embed = createEmbedFromData(data);
+        await interaction.followUp({ embeds: [embed], ephemeral: false });
+      } catch (e) {
+        if (e.code === 10062) {
+          console.warn('followUp失敗（Unknown interaction, 無視）');
+        } else {
+          console.error('フォローアップ送信失敗:', e);
+        }
+      }
+    }
+  }
+});
+
+client.login(process.env.DISCORD_TOKEN).catch(console.error);
