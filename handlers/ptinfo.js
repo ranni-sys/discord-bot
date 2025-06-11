@@ -1,11 +1,17 @@
 const fetch = require('node-fetch');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} = require('discord.js');
 
+// Markdownの特殊文字をエスケープ
 function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
-// GASからPT情報を取得しJSONで返す関数
+// GASからPT情報を取得
 async function handlePTInfo(ptnumber) {
   if (!ptnumber) throw new Error('PT番号が指定されていません');
 
@@ -46,26 +52,23 @@ async function handlePTInfo(ptnumber) {
   return data;
 }
 
-// EmbedBuilderを返す関数
+// EmbedBuilderを生成する内部関数
 function createEmbedFromData(data) {
   const separator = '　'; // 全角スペース1文字
-  const descriptionLines = data.entries.map(entry => {
-    if (entry.type === 'separator') {
-      return separator; // 空行として全角スペース1文字
-    }
-    return `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`;
-  });
+  const descriptionLines = data.entries.map(entry =>
+    entry.type === 'separator'
+      ? separator
+      : `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`
+  );
 
-  const embed = new EmbedBuilder()
+  return new EmbedBuilder()
     .setTitle(`PT情報: ${escapeMarkdown(data.title)}`)
     .setColor(0x00AE86)
     .setDescription(descriptionLines.join('\n'))
     .setFooter({ text: '参加or訂正は該当URLから' });
-
-  return embed;
 }
 
-// EmbedBuilderとボタンを返す関数
+// Embedとボタンコンポーネントを返す関数
 function createEmbedComponentsFromData(data) {
   const embed = createEmbedFromData(data);
 
@@ -84,4 +87,7 @@ function createEmbedComponentsFromData(data) {
   return { embed, components: [buttons] };
 }
 
-module.exports = { handlePTInfo, createEmbedFromData, createEmbedComponentsFromData };
+module.exports = {
+  handlePTInfo,
+  createEmbedComponentsFromData,
+};
