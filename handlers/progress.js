@@ -1,10 +1,12 @@
 const fetch = require('node-fetch');
 const { EmbedBuilder } = require('discord.js');
 
+// Markdownの特殊文字をエスケープ
 function escapeMarkdown(text) {
   return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
 }
 
+// GASからクリア状況を取得する関数
 async function handleprogress(membername) {
   if (!membername) throw new Error('家名が指定されていません');
 
@@ -45,23 +47,29 @@ async function handleprogress(membername) {
   return data;
 }
 
-// EmbedBuilderを返す関数
-function createEmbedFromDataofprogress(data) {
+// EmbedBuilderを生成する内部関数
+function createEmbedFromData(data) {
   const separator = '　'; // 全角スペース1文字
-  const descriptionLines = data.entries.map(entry => {
-    if (entry.type === 'separator') {
-      return separator; // 空行として全角スペース1文字
-    }
-    return `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`;
-  });
+  const descriptionLines = data.entries.map(entry =>
+    entry.type === 'separator'
+      ? separator
+      : `${escapeMarkdown(entry.label)} | ${escapeMarkdown(entry.value)}`
+  );
 
-  const embed = new EmbedBuilder()
+  return new EmbedBuilder()
     .setTitle(`クリア状況: ${escapeMarkdown(data.title)}`)
     .setColor(0x00AE86)
     .setDescription(descriptionLines.join('\n'))
     .setFooter({ text: '情報は古い可能性があります' });
-
-  return embed;
 }
 
-module.exports = { handleprogress, createEmbedFromDataofprogress };
+// 埋め込み＋コンポーネント（今回はボタンなし）を返す関数
+function createEmbedComponentsFromData(data) {
+  const embed = createEmbedFromData(data);
+  return { embed, components: [] };
+}
+
+module.exports = {
+  handleprogress,
+  createEmbedComponentsFromData,
+};
