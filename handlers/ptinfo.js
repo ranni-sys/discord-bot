@@ -78,7 +78,7 @@ function createEmbedComponentsFromData(data) {
     new ButtonBuilder()
       .setLabel('削除')
       .setStyle(ButtonStyle.Link)
-      .setURL(data.deleteUrl || 'https://example.com/delete')
+      .setURL(data.deleteUrl || 'https://forms.gle/RkfGGH2NGBD2CwTK8')
   );
 
   return { embed, components: [buttons] };
