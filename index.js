@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const { handlePTInfo, createEmbedComponentsFromData } = require('./handlers/ptinfo');
+const { handleprogress } = require('./handlers/progress'); // ✅ 追加
 const { registerCommands } = require('./deploy-commands');
 const TIMEOUT_MS = 10000;
 
@@ -26,16 +27,17 @@ client.once('ready', async () => {
   }
 });
 
-// フォーム送信通知APIエンドポイント
+// ==========================
+// 通知API
+// ==========================
 const { EmbedBuilder } = require('discord.js');
 
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
     const ptNumber = String(data.ptNumber);
-    const source = data.source || 'A'; // デフォルトは「A」
+    const source = data.source || 'A';
 
-    // 🔁 通知先チャンネルIDを分岐
     const channelId =
       source === 'C'
         ? process.env.DISCORD_NOTIFY_CHANNEL_ID_A
@@ -44,22 +46,15 @@ app.post('/notify', async (req, res) => {
         : process.env.DISCORD_NOTIFY_CHANNEL_ID_A;
 
     const channel = await client.channels.fetch(channelId);
+    if (!channel) return res.status(404).send('通知先チャンネルが見つかりません');
 
-    if (!channel) {
-      return res.status(404).send('通知先チャンネルが見つかりません');
-    }
-
-    // ✅ ソースCの場合は特別処理
     if (source === 'C') {
       const embed = new EmbedBuilder()
         .setTitle(`PT情報: ${ptNumber}`)
         .setColor(0x00AE86)
         .setDescription('パーティを削除しました');
 
-      await channel.send({
-        embeds: [embed]
-      });
-
+      await channel.send({ embeds: [embed] });
       return res.status(200).send('通知を送信しました');
     }
 
@@ -83,8 +78,6 @@ app.post('/notify', async (req, res) => {
     }
 
     const { embed, components } = createEmbedComponentsFromData(fetchedData);
-
-    // ✨ 通知メッセージも分岐
     const message =
       source === 'B'
         ? 'パーティに追加メンバーが加入しました！'
@@ -103,30 +96,36 @@ app.post('/notify', async (req, res) => {
   }
 });
 
-
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 通知APIサーバー起動中 (ポート: ${PORT})`);
-});
-
+// ==========================
+// スラッシュコマンド処理
+// ==========================
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
-  if (interaction.commandName !== 'ptinfo') return;
-
-  const ptNumber = interaction.options.getString('ptnumber');
+  if (!['ptinfo', 'progress'].includes(interaction.commandName)) return;
 
   try {
     await interaction.deferReply({ ephemeral: true });
 
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10s')), TIMEOUT_MS));
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout after 10s')), TIMEOUT_MS)
+    );
 
-    const data = await Promise.race([
-      handlePTInfo(ptNumber),
-      timeout,
-    ]);
+    let data;
+    if (interaction.commandName === 'ptinfo') {
+      const ptNumber = interaction.options.getString('ptnumber');
+      data = await Promise.race([
+        handlePTInfo(ptNumber),
+        timeout,
+      ]);
+    } else if (interaction.commandName === 'progress') {
+      const membername = interaction.options.getString('membername'); // ✅ スペースなし
+      data = await Promise.race([
+        handleprogress(membername),
+        timeout,
+      ]);
+    }
 
-    await interaction.editReply({ content: '✅ PT情報を正常に取得しました。' });
+    await interaction.editReply({ content: '✅ 情報を正常に取得しました。' });
 
     const { embed, components } = createEmbedComponentsFromData(data);
     await interaction.followUp({ embeds: [embed], components: components, ephemeral: false });
@@ -171,7 +170,15 @@ client.on('interactionCreate', async interaction => {
 
     if (err.message === 'Timeout after 10s') {
       try {
-        const data = await handlePTInfo(ptNumber);
+        let data;
+        if (interaction.commandName === 'ptinfo') {
+          const ptNumber = interaction.options.getString('ptnumber');
+          data = await handlePTInfo(ptNumber);
+        } else if (interaction.commandName === 'progress') {
+          const membername = interaction.options.getString('membername');
+          data = await handleprogress(membername);
+        }
+
         const { embed, components } = createEmbedComponentsFromData(data);
         await interaction.followUp({ embeds: [embed], components: components, ephemeral: false });
       } catch (e) {
@@ -183,6 +190,14 @@ client.on('interactionCreate', async interaction => {
       }
     }
   }
+});
+
+// ==========================
+// 起動
+// ==========================
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 通知APIサーバー起動中 (ポート: ${PORT})`);
 });
 
 client.login(process.env.DISCORD_TOKEN).catch(console.error);
