@@ -7,9 +7,7 @@ const {
 } = require('discord.js');
 
 // Markdownの特殊文字をエスケープ
-function escapeMarkdown(text) {
-  return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
-}
+const { escapeMarkdown } = require('discord-bot/utils/escapeMarkdown');
 
 // GASからPT情報を取得
 async function handlePTInfo(ptnumber) {
