@@ -7,7 +7,7 @@ const {
 } = require('discord.js');
 
 // Markdownの特殊文字をエスケープ
-const { escapeMarkdown } = require('discord-bot/utils/escapeMarkdown');
+const { escapeMarkdown } = require('../utils/escapeMarkdown');
 
 // GASからPT情報を取得
 async function handlePTInfo(ptnumber) {
