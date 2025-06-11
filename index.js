@@ -40,9 +40,11 @@ app.post('/notify', async (req, res) => {
 
     const channelId =
       source === 'C'
-        ? process.env.DISCORD_NOTIFY_CHANNEL_ID_A
+        ? process.env.DISCORD_NOTIFY_CHANNEL_ID_C
         : source === 'B'
         ? process.env.DISCORD_NOTIFY_CHANNEL_ID_B
+        : source === 'D'
+        ? process.env.DISCORD_NOTIFY_CHANNEL_ID_D
         : process.env.DISCORD_NOTIFY_CHANNEL_ID_A;
 
     const channel = await client.channels.fetch(channelId);
@@ -53,6 +55,16 @@ app.post('/notify', async (req, res) => {
         .setTitle(`PT情報: ${ptNumber}`)
         .setColor(0x00AE86)
         .setDescription('パーティを削除しました');
+
+      await channel.send({ embeds: [embed] });
+      return res.status(200).send('通知を送信しました');
+    }
+
+    if (source === 'D') {
+      const embed = new EmbedBuilder()
+        .setTitle(`メンバー情報: ${data.membername || '不明'}`)
+        .setColor(0x3498db)
+        .setDescription('PT祠進捗が更新されました。');
 
       await channel.send({ embeds: [embed] });
       return res.status(200).send('通知を送信しました');
