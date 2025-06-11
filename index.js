@@ -32,10 +32,12 @@ client.once('ready', async () => {
 // ==========================
 const { EmbedBuilder } = require('discord.js');
 
+// 通知APIの中から一部修正と追加
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
     const ptNumber = String(data.ptNumber);
+    const membername = data.membername;
     const source = data.source || 'A';
 
     const channelId =
@@ -50,6 +52,7 @@ app.post('/notify', async (req, res) => {
     const channel = await client.channels.fetch(channelId);
     if (!channel) return res.status(404).send('通知先チャンネルが見つかりません');
 
+    // C: PT削除通知
     if (source === 'C') {
       const embed = new EmbedBuilder()
         .setTitle(`PT情報: ${ptNumber}`)
@@ -60,20 +63,29 @@ app.post('/notify', async (req, res) => {
       return res.status(200).send('通知を送信しました');
     }
 
+    // D: 進捗通知（handleprogress）
     if (source === 'D') {
-      const embed = new EmbedBuilder()
-        .setTitle(`メンバー情報: ${data.membername || '不明'}`)
-        .setColor(0x3498db)
-        .setDescription('PT祠進捗が更新されました。');
+      try {
+        const progressData = await handleprogress(membername);
+        const { embed, components } = createEmbedComponentsFromData(progressData);
 
-      await channel.send({ embeds: [embed] });
-      return res.status(200).send('通知を送信しました');
+        await channel.send({
+          content: `メンバー「${membername}」の進捗が更新されました。`,
+          embeds: [embed],
+          components,
+        });
+        return res.status(200).send('通知を送信しました');
+      } catch (err) {
+        console.error('進捗情報取得に失敗:', err);
+        return res.status(500).send(`進捗情報取得エラー: ${err.message}`);
+      }
     }
 
-    async function retryHandlePTInfo(ptNumber, maxRetries = 5, delayMs = TIMEOUT_MS) {
+    // AまたはB: PT情報通知
+    async function retry(fn, maxRetries = 5, delayMs = TIMEOUT_MS) {
       for (let i = 0; i < maxRetries; i++) {
         try {
-          return await handlePTInfo(ptNumber);
+          return await fn();
         } catch (err) {
           if (i === maxRetries - 1) throw err;
           await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -83,7 +95,7 @@ app.post('/notify', async (req, res) => {
 
     let fetchedData;
     try {
-      fetchedData = await retryHandlePTInfo(ptNumber);
+      fetchedData = await retry(() => handlePTInfo(ptNumber));
     } catch (err) {
       console.error('PT情報取得に失敗:', err);
       return res.status(500).send(`通知送信エラー: ${err.message}`);
@@ -98,7 +110,7 @@ app.post('/notify', async (req, res) => {
     await channel.send({
       content: message,
       embeds: [embed],
-      components: components
+      components
     });
 
     res.status(200).send('通知を送信しました');
