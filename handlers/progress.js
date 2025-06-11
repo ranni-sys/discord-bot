@@ -2,9 +2,7 @@ const fetch = require('node-fetch');
 const { EmbedBuilder } = require('discord.js');
 
 // Markdownの特殊文字をエスケープ
-function escapeMarkdown(text) {
-  return (typeof text === 'string' ? text : String(text ?? '―')).replace(/([*_`~|])/g, '\\$1');
-}
+const { escapeMarkdown } = require('../utils/escapeMarkdown');
 
 // GASからクリア状況を取得する関数
 async function handleprogress(membername) {
