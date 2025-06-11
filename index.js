@@ -31,7 +31,14 @@ app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
     const ptNumber = String(data.ptNumber);
-    const channelId = process.env.DISCORD_NOTIFY_CHANNEL_ID;
+    const source = data.source || 'A'; // デフォルトは「A」
+
+    // 🔁 通知先チャンネルIDを分岐
+    const channelId =
+      source === 'B'
+        ? process.env.DISCORD_NOTIFY_CHANNEL_ID_B
+        : process.env.DISCORD_NOTIFY_CHANNEL_ID_A;
+
     const channel = await client.channels.fetch(channelId);
 
     if (!channel) {
@@ -58,8 +65,15 @@ app.post('/notify', async (req, res) => {
     }
 
     const { embed, components } = createEmbedComponentsFromData(fetchedData);
+
+    // ✨ 通知メッセージも分岐
+    const message =
+      source === 'B'
+        ? 'パーティに追加メンバーが加入しました！'
+        : '新しいパーティの募集があります';
+
     await channel.send({
-      content: "新しいパーティの募集があります",
+      content: message,
       embeds: [embed],
       components: components
     });
@@ -70,6 +84,7 @@ app.post('/notify', async (req, res) => {
     res.status(500).send('通知送信中にエラーが発生しました');
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
