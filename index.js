@@ -27,6 +27,8 @@ client.once('ready', async () => {
 });
 
 // フォーム送信通知APIエンドポイント
+const { EmbedBuilder } = require('discord.js');
+
 app.post('/notify', async (req, res) => {
   try {
     const data = req.body;
@@ -35,7 +37,9 @@ app.post('/notify', async (req, res) => {
 
     // 🔁 通知先チャンネルIDを分岐
     const channelId =
-      source === 'B'
+      source === 'C'
+        ? process.env.DISCORD_NOTIFY_CHANNEL_ID_A
+        : source === 'B'
         ? process.env.DISCORD_NOTIFY_CHANNEL_ID_B
         : process.env.DISCORD_NOTIFY_CHANNEL_ID_A;
 
@@ -43,6 +47,20 @@ app.post('/notify', async (req, res) => {
 
     if (!channel) {
       return res.status(404).send('通知先チャンネルが見つかりません');
+    }
+
+    // ✅ ソースCの場合は特別処理
+    if (source === 'C') {
+      const embed = new EmbedBuilder()
+        .setTitle(`PT情報: ${ptNumber}`)
+        .setColor(0x00AE86)
+        .setDescription('パーティを削除しました');
+
+      await channel.send({
+        embeds: [embed]
+      });
+
+      return res.status(200).send('通知を送信しました');
     }
 
     async function retryHandlePTInfo(ptNumber, maxRetries = 5, delayMs = TIMEOUT_MS) {
@@ -84,6 +102,7 @@ app.post('/notify', async (req, res) => {
     res.status(500).send('通知送信中にエラーが発生しました');
   }
 });
+
 
 
 const PORT = process.env.PORT || 3000;
