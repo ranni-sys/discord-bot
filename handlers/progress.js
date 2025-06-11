@@ -46,7 +46,7 @@ async function handleprogress(membername) {
 }
 
 // EmbedBuilderを返す関数
-function createEmbedFromData(data) {
+function createEmbedFromDataofprogress(data) {
   const separator = '　'; // 全角スペース1文字
   const descriptionLines = data.entries.map(entry => {
     if (entry.type === 'separator') {
@@ -64,4 +64,4 @@ function createEmbedFromData(data) {
   return embed;
 }
 
-module.exports = { handleprogress, createEmbedFromData };
+module.exports = { handleprogress, createEmbedFromDataofprogress };
