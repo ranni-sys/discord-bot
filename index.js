@@ -130,7 +130,7 @@ client.on('interactionCreate', async interaction => {
         timeout,
       ]);
     } else if (interaction.commandName === 'progress') {
-      const membername = interaction.options.getString('membername'); // ✅ スペースなし
+      const membername = interaction.options.getString('membername');
       data = await Promise.race([
         handleprogress(membername),
         timeout,
