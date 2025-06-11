@@ -1,6 +1,7 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 
+// ✅ コマンド定義
 const commands = [
   new SlashCommandBuilder()
     .setName('ptinfo')
@@ -9,9 +10,17 @@ const commands = [
       option.setName('ptnumber')
         .setDescription('取得したいPT番号（例: PT1）')
         .setRequired(true)
+    ),
+
+  new SlashCommandBuilder()
+    .setName('progress')
+    .setDescription('指定したメンバー名のクリア状況を取得します')
+    .addStringOption(option =>
+      option.setName('membername')
+        .setDescription('メンバー名を入力（例: Ranniの旅）')
+        .setRequired(true)
     )
-    .toJSON()
-];
+].map(command => command.toJSON()); // 全てJSON形式に変換
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
@@ -30,7 +39,7 @@ async function registerCommands() {
       );
     }
 
-    console.log('🆕 スラッシュコマンドを登録中...');
+    console.log('🆕 新しいスラッシュコマンドを登録中...');
 
     await rest.put(
       Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
@@ -39,7 +48,7 @@ async function registerCommands() {
 
     console.log('✅ スラッシュコマンドを登録しました！');
   } catch (error) {
-    if (error.code && error.code === 50001) {
+    if (error.code === 50001) {
       console.error('❌ アクセス許可が不足しています。Botに適切な権限が付与されているか確認してください。');
     } else {
       console.error('❌ スラッシュコマンド登録中にエラーが発生しました:', error);
