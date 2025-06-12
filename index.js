@@ -27,6 +27,11 @@ client.once('ready', async () => {
   }
 });
 
+app.get('/', (req, res) => {
+  console.log(`[Ping] ${new Date().toISOString()} - Received Ping from GAS`);
+  res.send('✅ Bot is alive');
+});
+
 // ==========================
 // 通知API
 // ==========================
